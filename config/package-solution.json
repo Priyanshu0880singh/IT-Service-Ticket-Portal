@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "it-service-ticket-portal-client-side-solution",
+    "id": "24ce5abc-339e-4019-b7b8-38dbc1799c3a",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.21.0"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "it-service-ticket-portal description"
+      },
+      "longDescription": {
+        "default": "it-service-ticket-portal description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "it-service-ticket-portal Feature",
+        "description": "The feature that activates elements of the it-service-ticket-portal solution.",
+        "id": "cda41fea-6326-4f77-a77f-077048b44eac",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/it-service-ticket-portal.sppkg"
+  }
+}

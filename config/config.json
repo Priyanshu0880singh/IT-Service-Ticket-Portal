@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "service-ticket-web-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/serviceTicketWeb/ServiceTicketWebWebPart.js",
+          "manifest": "./src/webparts/serviceTicketWeb/ServiceTicketWebWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "ServiceTicketWebWebPartStrings": "lib/webparts/serviceTicketWeb/loc/{locale}.js"
+  }
+}
