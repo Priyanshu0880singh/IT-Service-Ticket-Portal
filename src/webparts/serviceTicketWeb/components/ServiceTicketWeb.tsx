@@ -42,7 +42,7 @@
  */
 
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 
@@ -270,6 +270,22 @@ async function createTicket(
   }
   const item = await res.json();
   return mapSPItemToTicket(item as ISPTicketItem);
+}
+
+async function addAttachmentFile(context: WebPartContext, itemId: number, file: File): Promise<void> {
+  const url = `${context.pageContext.web.absoluteUrl}/_api/web/lists/getbytitle('${LIST_NAME}')/items(${itemId})/AttachmentFiles/add(FileName='${encodeURIComponent(file.name)}')`;
+  const arrayBuffer = await file.arrayBuffer();
+  const res = await context.spHttpClient.post(url, SPHttpClient.configurations.v1, {
+    headers: {
+      Accept: 'application/json;odata=nometadata',
+      'odata-version': ''
+    },
+    body: arrayBuffer as unknown as string
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`Failed to attach file: ${t}`);
+  }
 }
 
 async function updateTicket(
@@ -537,6 +553,8 @@ const ServiceTicketWeb: React.FC<IServiceTicketWebProps> = ({ context }) => {
 
   // ---- raise form ----
   const [form, setForm] = useState<IRaiseForm>(emptyForm);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ---- check status (user) ----
   const [checkTicketId, setCheckTicketId] = useState<string>('');
@@ -638,6 +656,7 @@ const ServiceTicketWeb: React.FC<IServiceTicketWebProps> = ({ context }) => {
 
   function openRaiseForm(): void {
     setForm({ ...emptyForm, employeeName: currentUserName || '', email: currentUserEmail || '' });
+    setAttachedFile(null);
     setInfoMsg('');
     setErrorMsg('');
     if (appMode === 'admin') { setAdminView('raise'); } else { setUserView('raise'); }
@@ -692,7 +711,16 @@ const ServiceTicketWeb: React.FC<IServiceTicketWebProps> = ({ context }) => {
         TimelineJSON: JSON.stringify(timeline)
       });
       setTickets(prev => [created, ...prev]);
-      setInfoMsg(`Ticket ${created.ticketId} raised. The IT team can see it now.`);
+      let successMsg = `Ticket ${created.ticketId} raised. The IT team can see it now.`;
+      if (attachedFile) {
+        try {
+          await addAttachmentFile(context, created.id, attachedFile);
+        } catch (attachErr) {
+          successMsg = `Ticket ${created.ticketId} raised, but the attachment failed to upload: ${(attachErr as Error).message}`;
+        }
+      }
+      setAttachedFile(null);
+      setInfoMsg(successMsg);
       openTicketDetail(created);
     } catch (e) {
       setErrorMsg((e as Error).message);
@@ -995,6 +1023,48 @@ const ServiceTicketWeb: React.FC<IServiceTicketWebProps> = ({ context }) => {
         <input style={{ ...styles.input, marginBottom: 16 }} value={form.subject} onChange={e => updateForm('subject', e.target.value)} />
         <label style={styles.label}>Description</label>
         <textarea style={styles.textarea} value={form.description} onChange={e => updateForm('description', e.target.value)} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            style={{ display: 'none' }}
+            onChange={e => setAttachedFile(e.target.files && e.target.files.length > 0 ? e.target.files[0] : null)}
+          />
+          <button
+            type="button"
+            style={{ ...styles.btnOutline, display: 'inline-flex', alignItems: 'center', gap: 8 }}
+            onClick={() => fileInputRef.current && fileInputRef.current.click()}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+            Attach file
+          </button>
+          {attachedFile && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: colors.text,
+              background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 6, padding: '6px 10px'
+            }}>
+              {attachedFile.name}
+              <button
+                type="button"
+                onClick={() => { setAttachedFile(null); if (fileInputRef.current) { fileInputRef.current.value = ''; } }}
+                title="Remove attachment"
+                style={{
+                  background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+                  display: 'inline-flex', alignItems: 'center', color: colors.subtext
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </span>
+          )}
+        </div>
+
         <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
           <button style={isLoading ? styles.btnPrimaryDisabled : styles.btnPrimary} disabled={isLoading} onClick={() => void submitRaiseTicket()}>
             {isLoading ? 'Submitting...' : 'Submit ticket'}
